@@ -19,7 +19,8 @@
 - Phase 5 (Browser State & Multi-Tab Management) is complete: `TabRegistry` implemented with per-tab ID assignment, URL/title tracking, task context associations (`taskId`, `description`, `metadata`), automatic lifecycle sync on page close events, and typed tools (`browser.open_tab`, `browser.switch_tab`, `browser.close_tab`, `browser.list_tabs`).
 - Phase 6 (Semantic Form Understanding) is complete: `FormInspector` implemented in `src/forms/inspector.ts` with structured form discovery, label resolution hierarchy, required constraint extraction, dropdown option enumeration, submit button discovery, synthetic page-level form support, and typed tool `form.inspect` (`R0`).
 - Phase 7 (Safe Form Filling Engine) is complete: `FormAgent` implemented in `src/forms/agent.ts` with decoupled draft field population (`R1`), required field completeness checks, strict authorization gating before submission (`R2`), dual conversational speech and Markdown report outputs, and typed tools (`form.fill_draft` [R1], `form.submit` [R2]).
-- Phase 8 (File Downloads & Uploads Management) is complete: `FileManager` implemented in `src/files/manager.ts` with Playwright download event interception, disk persistence and byte size verification, pre-upload disk checks, DOM file input attachment verification, SHA256 checksum generation, and typed tools (`file.download` [R1], `file.upload` [R1], `file.verify` [R0]). Total automated test suite now passes 69 out of 69 tests across all 12 test suites.
+- Phase 8 (File Downloads & Uploads Management) is complete: `FileManager` implemented in `src/files/manager.ts` with Playwright download event interception, disk persistence and byte size verification, pre-upload disk checks, DOM file input attachment verification, SHA256 checksum generation, and typed tools (`file.download` [R1], `file.upload` [R1], `file.verify` [R0]).
+- Phase 9 (Real Verification Engine) is complete: `VerificationService` implemented in `src/verification/service.ts` with comprehensive snapshot capture (`captureSnapshot`), declarative assertion engine (`URL_CHANGED`, `URL_CONTAINS`, `URL_EQUALS`, `TITLE_CONTAINS`, `ELEMENT_VISIBLE`, `ELEMENT_HIDDEN`, `TEXT_PRESENT`, `TEXT_ABSENT`, `VALUE_EQUALS`, `FILE_EXISTS_ON_DISK`, `STATE_MUTATED`), anti-hallucination/fake completion rejection, sensitive challenge detection (CAPTCHAs, OTP, 2FA gating status to `WAITING_FOR_USER`), `executeAndVerify()` wrapper, and registered tools (`verification.inspect_state`, `verification.assert`). Total test suite now passes 78 out of 78 tests across all 13 test suites.
 
 ---
 
@@ -33,6 +34,7 @@
 - **ADR-007 (Semantic Form Model):** Form inspection generates structured schemas capturing field identifiers, input types, computed accessible labels, required constraints (HTML5, ARIA, and visual asterisks), select option lists, current values, and submit buttons before any filling actions commence.
 - **ADR-008 (Strict Form Authorization Gate):** Form filling is strictly decoupled from submission. Draft field population operates at `R1` (reversible), while submission is locked behind an explicit user confirmation gate (`R2`).
 - **ADR-009 (Real Filesystem Verification):** Downloaded files are never assumed complete from network triggers alone; they must be verified on disk (`fs.existsSync`, `stat.size > 0`, and SHA256 integrity). Uploaded files must be verified on disk prior to attachment and confirmed via DOM evaluation.
+- **ADR-010 (Declarative Multi-Condition Verification):** Action success cannot be asserted by code generation or tool invocation alone. The `VerificationService` evaluates declarative pre- and post-condition assertions across browser URL, DOM elements/text, and filesystem state. If any condition is unsatisfied, the action is flagged `FAILED`. If a CAPTCHA or OTP login challenge is detected, execution halts safely in `WAITING_FOR_USER` mode.
 - **Security Boundary:** Webpage text is untrusted external data. Prompt injection protections must isolate external web content from privileged agent instructions.
 - **Risk Tiers:** Tiered authorization model (`R0` read-only, `R1` low-risk/reversible, `R2` external effect requiring user approval, `R3` high-impact requiring multi-step authorization). Form filling is decoupled from form submission.
 - **LLM Model Selection:** Discovered and verified `deepseek-v4-flash` as the active, high-performance model on CheaperInference gateway.
@@ -96,9 +98,19 @@
 - **Form Action Attribute Extraction:** Use `el.getAttribute('action') || el.action` because `el.action` property can be empty or relative on `data:` or headless test URIs.
 - **Authorization Gating Enforcement:** Block execution in code before calling any submit locator if `authorizeSubmit` flag is missing or false.
 - **Download Event Ordering:** In Playwright, `page.waitForEvent('download')` MUST be set up before triggering the download action to avoid missing fast download events.
+- **DAG Execution Variable Substitution:** In `SupervisorAgent`, dynamic variables referencing previous step outputs (e.g. `$step-1.sources[0].url`) are resolved at runtime prior to tool/action execution, enabling loose coupling between independent DAG steps.
+- **Planner Test Optimization:** Test suites avoid remote LLM API calls by default (`process.env.NODE_ENV === 'test'`) and use deterministic heuristic DAG generation unless explicitly instructed, reducing test suite time from 45s to 21ms.
+
+---
+
+## 10. Architecture Decision Records (ADRs) Log
+- **ADR-001 through ADR-010:** (See detailed entries above).
+- **ADR-011: DAG Step Planning & Supervised Execution Architecture:**
+  - *Context:* Complex workflows (e.g., search -> browse -> extract -> summarize -> download) require dependency-aware multi-step orchestration with cycle detection and cascading failure mitigation.
+  - *Decision:* Implemented `PlannerAgent` with Kahn's algorithm for cycle validation and dynamic topological sequencing (`getNextExecutableSteps`). Implemented `SupervisorAgent` handling trilingual intent classification, conversational fast-paths, R2 action authorization pausing (`WAITING_FOR_AUTHORIZATION`), sensitive handoff (`WAITING_FOR_USER`), and dynamic parameter resolution (`$step-id.field`).
 
 ---
 
 ## 11. Current Milestone
-- **Current Phase:** Phase 8 (File Downloads & Uploads Management) — `[x] Completed`.
-- **Next Milestone:** Phase 9 — Real Verification Engine (`TASK-901`: Build VerificationService & Pre/Post State Inspector).
+- **Current Phase:** Phase 10 (Supervisor & Dynamic Planner Agents) — `[x] Completed`.
+- **Next Milestone:** Phase 11 — Cross-Session Persistent Memory (`TASK-1101`: Implement MemoryAgent & Session Store).

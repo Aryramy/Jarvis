@@ -18,13 +18,13 @@
 | **Phase 1** | Core Agent Runtime & Foundation | `[x]` Completed |
 | **Phase 2** | Browser Open / Read / Navigation | `[x]` Completed |
 | **Phase 3** | Web Search Subsystem | `[x]` Completed |
-| **Phase 4** | Browser Semantic Interaction (Click / Type / Scroll) | `[ ]` Ready to Start |
-| **Phase 5** | Browser State & Multi-Tab Management | `[ ]` Not Started |
-| **Phase 6** | Semantic Form Understanding | `[ ]` Not Started |
-| **Phase 7** | Safe Form Filling Engine | `[ ]` Not Started |
-| **Phase 8** | File Downloads & Uploads Management | `[ ]` Not Started |
-| **Phase 9** | Real Verification Engine | `[ ]` Not Started |
-| **Phase 10** | Supervisor & Dynamic Planner Agents | `[ ]` Not Started |
+| **Phase 4** | Browser Semantic Interaction (Click / Type / Scroll) | `[x]` Completed |
+| **Phase 5** | Browser State & Multi-Tab Management | `[x]` Completed |
+| **Phase 6** | Semantic Form Understanding | `[x]` Completed |
+| **Phase 7** | Safe Form Filling Engine | `[x]` Completed |
+| **Phase 8** | File Downloads & Uploads Management | `[x]` Completed |
+| **Phase 9** | Real Verification Engine | `[x]` Completed |
+| **Phase 10** | Supervisor & Dynamic Planner Agents | `[~]` In Progress |
 | **Phase 11** | Cross-Session Persistent Memory | `[ ]` Not Started |
 | **Phase 12** | Multilingual Speech-To-Text (EN, UR, AR, Mixed) | `[ ]` Not Started |
 | **Phase 13** | Edge Natural TTS & Multi-Provider Benchmark | `[ ]` Not Started |
@@ -197,28 +197,31 @@ Acceptance Criteria: Verified file existence, path, and size; prompts user when 
 # PHASE 9 — Real Verification Engine
 
 ## TASK-901 — Build VerificationService & Pre/Post State Inspector
-Status: `[ ]`  
+Status: `[x]`  
 Priority: Critical  
 Objective: Independent verification engine checking pre/post conditions (URL change, DOM confirmation text, file existence). Rejects fake success.  
 Dependencies: TASK-104, TASK-202, TASK-801  
-Acceptance Criteria: Correctly flags unconfirmed actions as `FAILED` or `WAITING_FOR_USER`.
+Verification: `tests/verification/service.test.ts` (9 tests passing) verifying declarative assertions (`TEXT_PRESENT`, `ELEMENT_VISIBLE`, `VALUE_EQUALS`, `URL_CHANGED`, `FILE_EXISTS_ON_DISK`), fake completion rejection, OTP/CAPTCHA sensitive handoff to `WAITING_FOR_USER`, and `executeAndVerify()` wrapper.  
+Acceptance Criteria: Correctly flags unconfirmed actions as `FAILED` or `WAITING_FOR_USER`. Fully integrated into `verification.inspect_state` and `verification.assert` tool envelopes.
 
 ---
 
 # PHASE 10 — Supervisor & Dynamic Planner Agents
 
 ## TASK-1001 — Implement PlannerAgent with DAG Step Decomposition
-Status: `[ ]`  
+Status: `[x]`  
 Priority: High  
 Objective: Break complex multi-step user prompts into actionable tool steps with dependency tracking and recovery branches.  
 Dependencies: TASK-104, TASK-901  
+Verification: `tests/planner/planner.test.ts` (5 tests passing) verifying DAG generation, Kahn's algorithm cycle detection, dependency resolution (`getNextExecutableSteps`), cascading failure handling (`replanOnFailure`), and dual speech/display summary outputs.  
 Acceptance Criteria: Plans complex flows (search -> open -> extract -> summarize -> download).
 
 ## TASK-1002 — Implement SupervisorAgent Orchestrator
-Status: `[ ]`  
+Status: `[x]`  
 Priority: High  
 Objective: Central controller coordinating intent parsing, risk tier enforcement (R0-R3), specialist delegation, and output splitting.  
 Dependencies: TASK-1001  
+Verification: `tests/supervisor/supervisor.test.ts` (5 tests passing) verifying trilingual intent parsing (EN, UR, AR script and Romanized), fast-path conversation handling, DAG step execution with dynamic variable resolution (`$step-1.sources[0].url`), R2 authorization gating (`WAITING_FOR_AUTHORIZATION`), sensitive handoff (`WAITING_FOR_USER`), and dual output generation.  
 Acceptance Criteria: Autonomous execution of multi-agent tasks with permission checks on R2 actions.
 
 ---

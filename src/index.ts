@@ -20,5 +20,8 @@ export * from './browser/index.js';
 export * from './search/index.js';
 export * from './forms/index.js';
 export * from './files/index.js';
+export * from './verification/index.js';
+export * from './planner/index.js';
+export * from './supervisor/index.js';
 
 console.log(`[JARVIS] Core Agent Runtime v${JARVIS_VERSION} initialized.`);

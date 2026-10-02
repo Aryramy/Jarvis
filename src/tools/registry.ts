@@ -11,7 +11,11 @@ export class ToolRegistry {
     if (this.tools.has(tool.name)) {
       throw new Error(`[ToolRegistry] Tool with name '${tool.name}' is already registered.`);
     }
-    this.tools.set(tool.name, tool);
+    const normalizedTool = {
+      ...tool,
+      inputSchema: tool.inputSchema ?? (tool as any).schema,
+    };
+    this.tools.set(tool.name, normalizedTool);
   }
 
   /**
@@ -26,6 +30,13 @@ export class ToolRegistry {
    */
   list(): ToolDefinition[] {
     return Array.from(this.tools.values());
+  }
+
+  /**
+   * Alias for list()
+   */
+  listTools(): ToolDefinition[] {
+    return this.list();
   }
 
   /**

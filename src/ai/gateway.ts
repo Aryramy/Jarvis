@@ -59,6 +59,25 @@ export class AiGateway {
   }
 
   /**
+   * Generates a text completion given a prompt string and optional system prompt.
+   */
+  async complete(
+    prompt: string,
+    options: { systemPrompt?: string; temperature?: number; model?: string } = {}
+  ): Promise<{ text: string }> {
+    const messages: ChatMessage[] = [];
+    if (options.systemPrompt) {
+      messages.push({ role: 'system', content: options.systemPrompt });
+    }
+    messages.push({ role: 'user', content: prompt });
+    const res = await this.chat(messages, {
+      temperature: options.temperature,
+      model: options.model,
+    });
+    return { text: res.content ?? '' };
+  }
+
+  /**
    * Streams chat completion tokens and tool call deltas asynchronously.
    */
   async *streamChat(
