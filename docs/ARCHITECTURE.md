@@ -67,13 +67,13 @@ flowchart TD
 |---|---|---|---|
 | **Runtime** | Node.js (v24.19.0) | `VERIFIED` | Core execution environment on Windows 11. |
 | **Package Manager** | npm (v11.17.0 via `npm.cmd`) | `VERIFIED` | Dependency management. |
-| **Language** | TypeScript / ESM | `PROPOSED` | Strongly-typed agent definitions, tools, and interfaces. |
+| **Language** | TypeScript / ESM | `VERIFIED` | Strongly-typed agent definitions, tools, and interfaces. |
 | **AI Backend** | CheaperInference API | `VERIFIED` (in `.env`) | OpenAI-compatible API for model completions & tool calling. |
-| **Browser Engine** | Playwright (Chromium) | `PROPOSED` | Semantic browser automation, tab management, DOM inspection. |
-| **Speech-To-Text** | Pluggable `STTProvider` | `PROPOSED` | Local Whisper / Hosted Whisper supporting EN, UR, AR. |
+| **Browser Engine** | Playwright (Chromium) | `VERIFIED` | Semantic browser automation, tab management, DOM inspection. |
+| **Speech-To-Text** | Pluggable `STTProvider` | `VERIFIED` | Whisper Cloud / Mock provider supporting EN, UR, AR, and Mixed code-switching. |
 | **Text-To-Speech** | `TTSProviderManager` | `PROPOSED` | Pluggable router with Edge TTS candidate and local offline fallback. |
 | **Sentence Segmenter** | Intl.Segmenter / regex | `PROPOSED` | Natural sentence boundary splitting for streaming audio. |
-| **Persistence** | File-backed JSON / SQLite | `PROPOSED` | Session state, task memory, and cached user preferences. |
+| **Persistence** | File-backed JSON / SessionStore | `VERIFIED` | Atomic file-backed session state, task memory, and cached user preferences with zero credential leakage. |
 
 ---
 
@@ -146,9 +146,10 @@ An independent validation service that confirms external actions produced expect
 - Rejects unverified completion claims with explicit status codes (`FAILED`, `WAITING_FOR_USER`, etc.).
 
 ### 5.6 VoiceSubsystem (`STTProvider` & `TTSProviderManager`)
-- **Language Detection:** Analyzes incoming audio/transcripts for language (`en`, `ur`, `ar`, `mixed`).
-- **Streaming Pipeline:** Pipes LLM text deltas through an `Intl.Segmenter` sentence boundary buffer.
-- **Provider Manager:** Routes English, Urdu, and Arabic to candidate voices, manages failover from primary online TTS to local offline fallback, and handles audio interruption (barge-in).
+- **Language & Code-Switching Detection (`detectLanguage`):** Analyzes incoming audio/transcripts across Arabic script, Urdu-specific Unicode glyphs (`ٹڈڑںےہھچپژگ`), stop words, and Romanized transliterations. Automatically classifies `en`, `ur`, `ar`, or `mixed` (code-switching).
+- **Voice Activity Detection (`VoiceActivityDetector`):** Real-time RMS energy analysis on 16-bit PCM audio frames transitioning across `SILENCE` -> `SPEECH_START` -> `SPEECH_ONGOING` -> `SPEECH_END` with configurable silence hangover cutoff.
+- **STT Provider Architecture (`STTProviderManager`):** Priority-ordered provider chain with automatic fallback failover between cloud Whisper (`WhisperCloudSTTProvider`) and fast offline mock (`MockSTTProvider`), outputting enriched `TranscriptionResult` with confidence scores and segment arrays.
+- **Streaming Pipeline:** Pipes LLM text deltas through an `Intl.Segmenter` sentence boundary buffer for subsequent TTS synthesis.
 
 ---
 
@@ -188,9 +189,17 @@ sequenceDiagram
 
 ---
 
-## 7. AI & LLM Architecture
-- **Inference Gateway:** OpenAI-compatible REST API configured via `.env` (`CHEAPERINFERENCE_BASE_URL` and `CHEAPERINFERENCE_API_KEY`).
-- **Model Usage:** Fast reasoning model for intent classification, streaming planning, and response summarization; structured tool-calling for agent execution.
+## 7. AI & LLM Architecture & Smart Routing
+- **Hosted Cheaper Inference Gateway:** Connects directly to `https://api.cheaperinference.com/v1` via environment configuration (`CHEAPERINFERENCE_BASE_URL` and `CHEAPERINFERENCE_API_KEY`). Zero local OmniRoute gateway dependencies.
+- **Dynamic Live Model Discovery (`model-catalog.mjs`):** Automatically discovers active chat models via `GET /v1/models?type=text&streaming=true`. Cached in-memory with a 5-minute TTL (`MODEL_CATALOG_TTL_MS=300000`). No hardcoded production models.
+- **Local Task Classification (`task-classifier.mjs`):** Analyzes incoming prompts locally without intermediate LLM overhead. Classifies requests into `normal`, `reasoning`, `coding`, and `vision`. Enforces adaptive output budgets (2000 to 5000 tokens) to prevent output truncation while encouraging concise responses.
+- **Context-Aware Token & Cost Estimation (`route-request.mjs`):** Computes input tokens over the full intended context window (system prompt + recent history + current prompt), yielding an accurate `Estimated Max Cost` before execution.
+- **Dynamic Model Selection (`model-router.mjs`):** Filters models by required capability flags, endpoint compatibility, and sorts by estimated cost. Selects the lowest-cost capable model while assembling at least 3 fallback candidate models.
+- **Dual Fallback Strategy:**
+  1. *Inner Provider Fallback:* Delegates provider/supply route failover to Cheaper Inference using `ranking: "discount"`.
+  2. *Outer Model Fallback:* If a selected model encounters retryable transport or gateway errors (404, 408, 425, 429, 5xx), JARVIS automatically fails over to the next candidate model.
+- **Atomic Multi-Turn Conversation Store (`conversation-store.mjs`):** Persists user and assistant messages to `data/conversation.json` via atomic write-and-rename. Protects valid history across application/system restarts. At startup, always injects the latest source system prompt, preventing stale instructions from overriding application updates.
+- **Anti-Hallucination & Memory Semantics:** Local memory question detector guides the model to inspect restored messages for prior topic recall without inventing missing details.
 - **Untrusted Web Content Boundary:** Webpage DOM trees, text snippets, and metadata are tagged with `<untrusted_web_content>` tags in prompt contexts. The supervisor prompt explicitly prohibits external text from asserting instructions or commanding agent tools.
 
 ---

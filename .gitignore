@@ -36,6 +36,11 @@ recordings/
 *.mp3
 *.wav
 
+# Persistent AI Memory Data
+.jarvis/
+data/
+data/memory/
+
 # Dependencies
 node_modules/
 

@@ -100,6 +100,10 @@
 - **Download Event Ordering:** In Playwright, `page.waitForEvent('download')` MUST be set up before triggering the download action to avoid missing fast download events.
 - **DAG Execution Variable Substitution:** In `SupervisorAgent`, dynamic variables referencing previous step outputs (e.g. `$step-1.sources[0].url`) are resolved at runtime prior to tool/action execution, enabling loose coupling between independent DAG steps.
 - **Planner Test Optimization:** Test suites avoid remote LLM API calls by default (`process.env.NODE_ENV === 'test'`) and use deterministic heuristic DAG generation unless explicitly instructed, reducing test suite time from 45s to 21ms.
+- **Atomic File-Backed Persistence & Metric Preservation:** In JSON-backed state stores, ensure object spread ordering places `...existing` before computed counter updates (`visitCount`) to prevent reverting metric increments.
+- **NFR-004 Credential Protection Boundary:** All persistent data structures (profiles, session states, tasks, metadata) MUST pass through `sanitizeData()` before touching disk to guarantee zero plain-text passwords, tokens, or cards reach filesystem storage.
+- **Voice Activity Detection Frame Counting:** `VoiceActivityDetector` requires careful distinction between `SPEECH_START` confirmation threshold and subsequent `SPEECH_ONGOING` accumulation to ensure audio buffers accurately encapsulate the complete spoken utterance.
+- **Module Barrel Re-export Discipline:** When re-exporting multiple subsystem barrels in root `index.ts`, ensure domain-specific types avoid collision (e.g. `VoiceLanguage` vs. `SupportedLanguage`) to prevent TypeScript ambiguity errors.
 
 ---
 
@@ -108,9 +112,18 @@
 - **ADR-011: DAG Step Planning & Supervised Execution Architecture:**
   - *Context:* Complex workflows (e.g., search -> browse -> extract -> summarize -> download) require dependency-aware multi-step orchestration with cycle detection and cascading failure mitigation.
   - *Decision:* Implemented `PlannerAgent` with Kahn's algorithm for cycle validation and dynamic topological sequencing (`getNextExecutableSteps`). Implemented `SupervisorAgent` handling trilingual intent classification, conversational fast-paths, R2 action authorization pausing (`WAITING_FOR_AUTHORIZATION`), sensitive handoff (`WAITING_FOR_USER`), and dynamic parameter resolution (`$step-id.field`).
+- **ADR-012: Atomic File-Backed Persistent Memory & Credential Boundary (NFR-004):**
+  - *Context:* Cross-session persistence requires durability across app restarts and crashes while guaranteeing zero plain-text secrets, passwords, or tokens reach disk.
+  - *Decision:* Implemented `SessionStore` with atomic file writes (`.tmp` write + rename), integrated with recursive `CredentialScrubber` (`sanitizeData`). Created `MemoryAgent` providing programmatic methods and tool envelopes (`memory.*`) for profiles, domains, session context, and task history. Integrated with `SupervisorAgent` for automatic execution logging.
+- **ADR-013: Multilingual STT Architecture, Code-Switching Detection & Streaming VAD:**
+  - *Context:* Voice-first assistant requires multilingual audio transcription across English, Urdu, and Arabic, seamless detection of technical code-switching, real-time Voice Activity Detection (VAD) for natural boundary segmentation, and resilient multi-provider failover.
+  - *Decision:* Implemented `STTProviderManager` with pluggable providers (`WhisperCloudSTTProvider`, `MockSTTProvider`), priority ordering, and automatic fallback failover. Implemented `detectLanguage()` analyzing Unicode script ranges (Arabic vs Urdu letters) and Romanized transliterations to identify code-switching (`mixed`). Implemented `VoiceActivityDetector` using RMS energy tracking with configurable hangover cutoff.
+- **ADR-014: Hosted Cheaper Inference Smart Routing & Multi-Turn Persistent Memory:**
+  - *Context:* Need intelligent cost-controlled AI routing and durable multi-turn conversational memory connecting directly to hosted Cheaper Inference (`https://api.cheaperinference.com/v1`) without hardcoding models or deploying local proxy daemons (OmniRoute).
+  - *Decision:* Implemented dynamic catalog discovery via `GET /v1/models` with 5-minute in-memory TTL caching. Implemented local task classification (`normal`, `reasoning`, `coding`, `vision`) with adaptive output budgets (2000-5000 tokens). Implemented context-aware full-window token and max cost estimation. Built dual-layer fallback (JARVIS outer model failover across 3 alternatives + Cheaper Inference inner supply route optimization via `ranking: "discount"`). Implemented atomic conversation store (`data/conversation.json`) with startup overwrite protection, source-driven system prompt replacement, and memory anti-hallucination guidance.
 
 ---
 
 ## 11. Current Milestone
-- **Current Phase:** Phase 10 (Supervisor & Dynamic Planner Agents) — `[x] Completed`.
-- **Next Milestone:** Phase 11 — Cross-Session Persistent Memory (`TASK-1101`: Implement MemoryAgent & Session Store).
+- **Current Phase:** Phase 12.5 (Hosted Cheaper Inference Smart Routing Bootstrap) — `[x] Completed`.
+- **Next Milestone:** Phase 13 — Edge Natural TTS & Multi-Provider Benchmark (`TASK-1301`: Build TTSProviderManager & Edge TTS Client).

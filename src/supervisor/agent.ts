@@ -14,15 +14,19 @@ import type {
   SupervisorRunOutput,
 } from './types.js';
 
+import type { MemoryAgent } from '../memory/agent.js';
+
 export interface SupervisorAgentOptions extends Partial<BaseAgentOptions> {
   planner?: PlannerAgent;
   verification?: VerificationService;
+  memory?: MemoryAgent;
   useLLMPlan?: boolean;
 }
 
 export class SupervisorAgent extends BaseAgent {
   readonly planner: PlannerAgent;
   readonly verification: VerificationService;
+  readonly memory?: MemoryAgent;
   readonly useLLMPlan: boolean;
 
   constructor(options?: SupervisorAgentOptions) {
@@ -43,6 +47,7 @@ You orchestrate specialized agents, manage execution plans, enforce safety risk 
     this.useLLMPlan = options?.useLLMPlan ?? (process.env.NODE_ENV !== 'test');
     this.planner = options?.planner ?? new PlannerAgent({ tools, gateway });
     this.verification = options?.verification ?? new VerificationService();
+    this.memory = options?.memory;
   }
 
   async observe(context: AgentContext): Promise<unknown> {
@@ -498,6 +503,27 @@ You orchestrate specialized agents, manage execution plans, enforce safety risk 
   async run(instruction: string, context: AgentContext = {}): Promise<AgentRunResult<SupervisorRunOutput>> {
     try {
       const output = await this.execute(instruction, context);
+
+      if (this.memory) {
+        try {
+          await this.memory.recordTask({
+            taskId: output.plan?.id ?? `task_${Date.now()}`,
+            sessionId: context.sessionId,
+            instruction,
+            intent: output.parsedIntent.intent,
+            language: output.parsedIntent.language,
+            status: output.status,
+            stepsCount: output.completedSteps,
+            startedAt: output.plan?.createdAt ?? Date.now(),
+            completedAt: Date.now(),
+            summary: output.displayResponse,
+            speechSummary: output.speechResponse,
+          });
+        } catch {
+          // Non-blocking memory persistence
+        }
+      }
+
       return {
         success: output.status === 'COMPLETED',
         output,

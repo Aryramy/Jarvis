@@ -24,9 +24,10 @@
 | **Phase 7** | Safe Form Filling Engine | `[x]` Completed |
 | **Phase 8** | File Downloads & Uploads Management | `[x]` Completed |
 | **Phase 9** | Real Verification Engine | `[x]` Completed |
-| **Phase 10** | Supervisor & Dynamic Planner Agents | `[~]` In Progress |
-| **Phase 11** | Cross-Session Persistent Memory | `[ ]` Not Started |
-| **Phase 12** | Multilingual Speech-To-Text (EN, UR, AR, Mixed) | `[ ]` Not Started |
+| **Phase 10** | Supervisor & Dynamic Planner Agents | `[x]` Completed |
+| **Phase 11** | Cross-Session Persistent Memory | `[x]` Completed |
+| **Phase 12** | Multilingual Speech-To-Text (EN, UR, AR, Mixed) | `[x]` Completed |
+| **Phase 12.5** | Hosted Cheaper Inference Smart Routing Foundation | `[x]` Completed |
 | **Phase 13** | Edge Natural TTS & Multi-Provider Benchmark | `[ ]` Not Started |
 | **Phase 14** | Trilingual Voice Mapping & Audition CLI | `[ ]` Not Started |
 | **Phase 15** | Speech Formatting (`prepareForSpeech`) & Sentence Chunking | `[ ]` Not Started |
@@ -229,10 +230,11 @@ Acceptance Criteria: Autonomous execution of multi-agent tasks with permission c
 # PHASE 11 — Cross-Session Persistent Memory
 
 ## TASK-1101 — Implement MemoryAgent & Session Store
-Status: `[ ]`  
+Status: `[x]`  
 Priority: Medium  
 Objective: Persist task history, workflow states, and user preferences across application restarts; strictly exclude credentials.  
 Dependencies: TASK-1002  
+Verification: `tests/memory/memory.test.ts` (14 tests passing) verifying atomic file-backed JSON persistence, cross-session restart recovery, domain rules/metrics, multi-parameter task history querying, NFR-004 credential scrubbing/redaction (zero secret leakage on disk), tool envelope registration (`memory.*`), natural language language-switching, and SupervisorAgent cross-agent task logging.  
 Acceptance Criteria: Restores previous session context on restart without credential leakage.
 
 ---
@@ -240,11 +242,24 @@ Acceptance Criteria: Restores previous session context on restart without creden
 # PHASE 12 — Multilingual Speech-To-Text (EN, UR, AR, Mixed)
 
 ## TASK-1201 — Implement STTProvider & Language Identification
-Status: `[ ]`  
+Status: `[x]`  
 Priority: High  
 Objective: Multilingual speech recognition supporting English, Urdu, Arabic, and code-switched technical speech with confidence scores.  
 Dependencies: TASK-1002  
+Verification: `tests/voice/stt.test.ts` (12 tests passing) verifying pure English, Urdu, Arabic language identification, Romanized Urdu technical code-switching, bilingual Arabic-Latin code-switching, real-time Voice Activity Detection (RMS energy, silence hangover cutoff, `speech_end`), `STTProviderManager` with automatic fallback failover, WAV and disk file transcriptions, and ToolRegistry envelopes (`voice.transcribe_audio`, `voice.detect_language`).  
 Acceptance Criteria: Correctly transcribes test audio samples in EN, UR, AR, and Mixed phrases.
+
+---
+
+# PHASE 12.5 — Hosted Cheaper Inference Smart Routing Foundation
+
+## TASK-1251 — Implement Smart Router & Hosted Model Discovery
+Status: `[x]`  
+Priority: Critical  
+Objective: Upgrade the AI gateway with dynamic hosted model discovery, task complexity classification (fast/cheap vs. complex reasoning vs. coding), tier-based smart routing, health check monitoring, resilient fallback chains, and token cost estimation.  
+Dependencies: TASK-102, TASK-1001  
+Verification: Verified through dedicated test suites (`test-classifier.mjs`, `test-router.mjs`, `test-memory.mjs`, `test-cheaper.mjs`, `test-e2e-routing.mjs`, and `tests/ai/smart-routing.test.ts` 10 tests passing) confirming live /v1/models discovery (68 active models), task classification, dynamic capability routing, context-aware token growth, model-level outer fallback, Cheaper Inference inner provider routing (`ranking: "discount"`), atomic file-backed conversation storage (`data/conversation.json`), post-restart topic recall, and anti-hallucination guard.  
+Acceptance Criteria: Discovers active hosted models, routes tasks based on complexity, transparently fails over on model outage, estimates usage costs, and preserves full backward compatibility with AiGateway callers.
 
 ---
 

@@ -10,7 +10,13 @@
     "start": "node dist/index.js",
     "dev": "tsx src/index.ts",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "chat": "node chat.mjs",
+    "test:connection": "node test-cheaper.mjs",
+    "test:classifier": "node test-classifier.mjs",
+    "test:router": "node test-router.mjs",
+    "test:memory": "node test-memory.mjs",
+    "test:e2e": "node test-e2e-routing.mjs"
   },
   "dependencies": {
     "dotenv": "^16.4.7",
