@@ -16,7 +16,8 @@
     "test:classifier": "node test-classifier.mjs",
     "test:router": "node test-router.mjs",
     "test:memory": "node test-memory.mjs",
-    "test:e2e": "node test-e2e-routing.mjs"
+    "test:e2e": "node test-e2e-routing.mjs",
+    "voices": "tsx src/voice/cli.ts"
   },
   "dependencies": {
     "dotenv": "^16.4.7",

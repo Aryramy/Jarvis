@@ -29,7 +29,7 @@
 | **Phase 12** | Multilingual Speech-To-Text (EN, UR, AR, Mixed) | `[x]` Completed |
 | **Phase 12.5** | Hosted Cheaper Inference Smart Routing Foundation | `[x]` Completed |
 | **Phase 13** | Edge Natural TTS & Multi-Provider Benchmark | `[x]` Completed |
-| **Phase 14** | Trilingual Voice Mapping & Audition CLI | `[ ]` Not Started |
+| **Phase 14** | Trilingual Voice Mapping & Audition CLI | `[x]` Completed |
 | **Phase 15** | Speech Formatting (`prepareForSpeech`) & Sentence Chunking | `[ ]` Not Started |
 | **Phase 16** | Barge-In & Audio Interruption Engine | `[ ]` Not Started |
 | **Phase 17** | Wake Word & Voice Activation Modes | `[ ]` Not Started |
@@ -278,11 +278,12 @@ Acceptance Criteria: Produces real audio files for all test phrases; evaluates w
 # PHASE 14 — Trilingual Voice Mapping & Audition CLI
 
 ## TASK-1401 — Implement Voice Audition Utility (`npm run voices`)
-Status: `[ ]`  
+Status: `[x]`  
 Priority: Medium  
 Objective: CLI utility to audition, benchmark, and configure preferred voices for English, Urdu, and Arabic.  
 Dependencies: TASK-1301  
-Acceptance Criteria: Generates standardized listening samples and saves user-approved voice mapping to configuration.
+Verification: `tests/voice/voice-config.test.ts` (6 tests passing) verifying schema validation, defaults, atomic writes, fallback handling, and language lookups; `tests/voice/audition.test.ts` (7 tests passing) verifying candidate discovery, direct provider targeting, audition synthesis, score computation, and recommendations; live CLI (`npm run voices`, `node voices.mjs`) verified across `--list`, `--audition`, `--set-en`, `--set-ur`, `--set-ar`, `--reset`, and `--json`; registered ToolRegistry envelopes (`voice.get_voice_mapping`, `voice.set_voice_mapping`, `voice.audition_voices`).  
+Acceptance Criteria: Standardized listening samples generated in `data/auditions/` and user-approved voice mapping safely persisted to `data/voice-config.json`.
 
 ---
 

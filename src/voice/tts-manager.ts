@@ -84,6 +84,28 @@ export class TTSProviderManager {
     return this.preferredVoices[language] || this.preferredVoices.en;
   }
 
+  getPreferredVoices(): Record<VoiceLanguage, string> {
+    return { ...this.preferredVoices };
+  }
+
+  /**
+   * Synchronizes preferred voices from persistent voice configuration file on disk.
+   */
+  async syncVoiceConfig(customPath?: string): Promise<void> {
+    try {
+      const { loadVoiceConfig } = await import('./voice-config.js');
+      const loaded = await loadVoiceConfig(customPath);
+      this.preferredVoices = {
+        en: loaded.en,
+        ur: loaded.ur,
+        ar: loaded.ar,
+        mixed: loaded.mixed,
+      };
+    } catch {
+      // Keep existing preferred voices if disk read fails
+    }
+  }
+
   /**
    * Discovers and aggregates available voices from all providers,
    * optionally filtered by target language.

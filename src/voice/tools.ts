@@ -217,5 +217,111 @@ export function createVoiceTools(
         }
       },
     },
+    {
+      name: 'voice.get_voice_mapping',
+      description: 'Returns the current active preferred voice configuration for English, Urdu, Arabic, and Mixed.',
+      riskLevel: 'R0',
+      inputSchema: z.object({}),
+      execute: async (_input: any, _context: AgentContext): Promise<ToolResult> => {
+        try {
+          const { loadVoiceConfig } = await import('./voice-config.js');
+          const config = await loadVoiceConfig();
+          return {
+            success: true,
+            action: 'voice.get_voice_mapping',
+            data: config,
+            evidence: {
+              en: config.en,
+              ur: config.ur,
+              ar: config.ar,
+              mixed: config.mixed,
+            },
+            riskLevel: 'R0',
+          };
+        } catch (error) {
+          return {
+            success: false,
+            action: 'voice.get_voice_mapping',
+            error: (error as Error).message,
+            riskLevel: 'R0',
+          };
+        }
+      },
+    },
+    {
+      name: 'voice.set_voice_mapping',
+      description: 'Updates and saves preferred voice mapping across English, Urdu, Arabic, or Mixed.',
+      riskLevel: 'R1',
+      inputSchema: z.object({
+        en: z.string().optional(),
+        ur: z.string().optional(),
+        ar: z.string().optional(),
+        mixed: z.string().optional(),
+      }),
+      execute: async (input: any, _context: AgentContext): Promise<ToolResult> => {
+        try {
+          const { saveVoiceConfig } = await import('./voice-config.js');
+          const updated = await saveVoiceConfig(input);
+          await ttsManager.syncVoiceConfig();
+          return {
+            success: true,
+            action: 'voice.set_voice_mapping',
+            data: updated,
+            evidence: {
+              en: updated.en,
+              ur: updated.ur,
+              ar: updated.ar,
+              mixed: updated.mixed,
+            },
+            riskLevel: 'R1',
+          };
+        } catch (error) {
+          return {
+            success: false,
+            action: 'voice.set_voice_mapping',
+            error: (error as Error).message,
+            riskLevel: 'R1',
+          };
+        }
+      },
+    },
+    {
+      name: 'voice.audition_voices',
+      description: 'Generates standardized listening audition samples for candidate voices and returns evaluation report.',
+      riskLevel: 'R0',
+      inputSchema: z.object({
+        languages: z.array(z.enum(['en', 'ur', 'ar', 'mixed'])).optional(),
+        outputDirectory: z.string().optional(),
+      }),
+      execute: async (input: any, _context: AgentContext): Promise<ToolResult> => {
+        try {
+          const { runVoiceAudition } = await import('./audition.js');
+          const report = await runVoiceAudition({
+            manager: ttsManager,
+            languages: input.languages,
+            outputDirectory: input.outputDirectory,
+          });
+          return {
+            success: true,
+            action: 'voice.audition_voices',
+            data: report,
+            evidence: {
+              totalCandidates: report.totalCandidates,
+              samplesGenerated: report.samplesGenerated,
+              outputDirectory: report.outputDirectory,
+              recommendedVoices: report.recommendedVoices,
+            },
+            riskLevel: 'R0',
+          };
+        } catch (error) {
+          return {
+            success: false,
+            action: 'voice.audition_voices',
+            error: (error as Error).message,
+            riskLevel: 'R0',
+          };
+        }
+      },
+    },
   ];
 }

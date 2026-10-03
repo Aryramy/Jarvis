@@ -124,9 +124,12 @@
 - **ADR-015: Trilingual TTS Provider Architecture, Edge TTS Client & Resilient Offline Fallback:**
   - *Context:* Natural voice generation is a core product requirement across English, Urdu, and Arabic. Unofficial endpoints can be subject to anti-abuse 403 blocks or latency spikes, requiring robust multi-language routing and multi-tier offline failover.
   - *Decision:* Implemented `TTSProviderManager` supporting preferred voice routing per language (`en`, `ur`, `ar`, `mixed`) with priority ordering: `EdgeTTSProvider` (online natural neural) -> `WindowsSapiTTSProvider` (local offline Windows neural/desktop WAV generation) -> `MockTTSProvider` (spec-compliant synthetic WAV generation). Built `runTTSBenchmark` engine evaluating warmth, latency SLA, and pronunciation across standardized test phrases. Integrated typed tools `voice.synthesize_speech` and `voice.benchmark_tts`.
+- **ADR-016: Trilingual Voice Mapping Configuration & Audition Engine:**
+  - *Context:* Trilingual digital assistant requires configurable voice mappings for English, Urdu, and Arabic that persist across application restarts, validate against schema integrity, allow CLI/agent auditioning of candidate voices, and cleanly synchronize with `TTSProviderManager`.
+  - *Decision:* Implemented `data/voice-config.json` with Zod schema validation and atomic write-rename persistence (`saveVoiceConfig`, `loadVoiceConfig`, `resetVoiceConfig`). Implemented `runVoiceAudition` synthesizing standardized listening phrases across discovered candidate voices into `data/auditions/` with warmth-based recommendations. Implemented interactive and flag-driven CLI (`src/voice/cli.ts`, `voices.mjs`, `npm run voices`) supporting `--list`, `--audition`, `--set-en`, `--set-ur`, `--set-ar`, `--reset`, and `--json`. Registered typed tools (`voice.get_voice_mapping` [R0], `voice.set_voice_mapping` [R1], `voice.audition_voices` [R0]) and integrated `TTSProviderManager.syncVoiceConfig()`.
 
 ---
 
 ## 11. Current Milestone
-- **Current Phase:** Phase 13 (Edge Natural TTS & Multi-Provider Benchmark) — `[x] Completed`.
-- **Next Milestone:** Phase 14 — Trilingual Voice Mapping & Audition CLI (`TASK-1401`: Implement Voice Audition Utility `npm run voices`).
+- **Current Phase:** Phase 14 (Trilingual Voice Mapping & Audition CLI) — `[x] Completed`.
+- **Next Milestone:** Phase 15 — Speech Formatting (`prepareForSpeech`) & Sentence Chunking (`TASK-1501`).

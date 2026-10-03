@@ -10,4 +10,7 @@ export * from './providers/windows-sapi.js';
 export * from './providers/edge-tts.js';
 export * from './tts-manager.js';
 export * from './benchmark.js';
+export * from './voice-config.js';
+export * from './audition.js';
+export * from './cli.js';
 export * from './tools.js';

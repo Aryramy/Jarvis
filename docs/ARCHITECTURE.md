@@ -259,3 +259,10 @@ sequenceDiagram
   3. *Deterministic Fallback:* `MockTTSProvider` generating spec-compliant 16kHz mono PCM WAV buffers for reliable test execution and offline environments.
   Implemented `runTTSBenchmark` engine evaluating warmth, latency SLA, and pronunciation across standardized test phrases.
 - **Consequences:** The system delivers natural neural speech when online while guaranteeing zero-crash conversational resilience in offline or restricted environments.
+
+### ADR-016: Trilingual Voice Mapping Configuration & Audition Engine
+- **Status:** Accepted
+- **Context:** Trilingual digital assistant requires configurable voice mappings for English, Urdu, and Arabic that persist across application restarts, validate against schema integrity, allow CLI/agent auditioning of candidate voices, and cleanly synchronize with `TTSProviderManager`.
+- **Decision:** Implemented `data/voice-config.json` with Zod schema validation and atomic write-rename persistence (`saveVoiceConfig`, `loadVoiceConfig`, `resetVoiceConfig`). Implemented `runVoiceAudition` synthesizing standardized listening phrases across discovered candidate voices into `data/auditions/` with warmth-based recommendations. Implemented interactive and flag-driven CLI (`src/voice/cli.ts`, `voices.mjs`, `npm run voices`) supporting `--list`, `--audition`, `--set-en`, `--set-ur`, `--set-ar`, `--reset`, and `--json`. Registered typed tools (`voice.get_voice_mapping` [R0], `voice.set_voice_mapping` [R1], `voice.audition_voices` [R0]) and integrated `TTSProviderManager.syncVoiceConfig()`.
+- **Consequences:** Provides a permanent, user-customizable voice selection pipeline across all supported languages with atomic file safety, direct provider targeting, and scriptable JSON output.
+
