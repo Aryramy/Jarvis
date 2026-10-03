@@ -121,9 +121,12 @@
 - **ADR-014: Hosted Cheaper Inference Smart Routing & Multi-Turn Persistent Memory:**
   - *Context:* Need intelligent cost-controlled AI routing and durable multi-turn conversational memory connecting directly to hosted Cheaper Inference (`https://api.cheaperinference.com/v1`) without hardcoding models or deploying local proxy daemons (OmniRoute).
   - *Decision:* Implemented dynamic catalog discovery via `GET /v1/models` with 5-minute in-memory TTL caching. Implemented local task classification (`normal`, `reasoning`, `coding`, `vision`) with adaptive output budgets (2000-5000 tokens). Implemented context-aware full-window token and max cost estimation. Built dual-layer fallback (JARVIS outer model failover across 3 alternatives + Cheaper Inference inner supply route optimization via `ranking: "discount"`). Implemented atomic conversation store (`data/conversation.json`) with startup overwrite protection, source-driven system prompt replacement, and memory anti-hallucination guidance.
+- **ADR-015: Trilingual TTS Provider Architecture, Edge TTS Client & Resilient Offline Fallback:**
+  - *Context:* Natural voice generation is a core product requirement across English, Urdu, and Arabic. Unofficial endpoints can be subject to anti-abuse 403 blocks or latency spikes, requiring robust multi-language routing and multi-tier offline failover.
+  - *Decision:* Implemented `TTSProviderManager` supporting preferred voice routing per language (`en`, `ur`, `ar`, `mixed`) with priority ordering: `EdgeTTSProvider` (online natural neural) -> `WindowsSapiTTSProvider` (local offline Windows neural/desktop WAV generation) -> `MockTTSProvider` (spec-compliant synthetic WAV generation). Built `runTTSBenchmark` engine evaluating warmth, latency SLA, and pronunciation across standardized test phrases. Integrated typed tools `voice.synthesize_speech` and `voice.benchmark_tts`.
 
 ---
 
 ## 11. Current Milestone
-- **Current Phase:** Phase 12.5 (Hosted Cheaper Inference Smart Routing Bootstrap) — `[x] Completed`.
-- **Next Milestone:** Phase 13 — Edge Natural TTS & Multi-Provider Benchmark (`TASK-1301`: Build TTSProviderManager & Edge TTS Client).
+- **Current Phase:** Phase 13 (Edge Natural TTS & Multi-Provider Benchmark) — `[x] Completed`.
+- **Next Milestone:** Phase 14 — Trilingual Voice Mapping & Audition CLI (`TASK-1401`: Implement Voice Audition Utility `npm run voices`).

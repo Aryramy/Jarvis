@@ -1,9 +1,15 @@
 import { z } from 'zod';
 import type { ToolDefinition, ToolResult, AgentContext } from '../tools/types.js';
 import type { STTProviderManager } from './provider-manager.js';
+import { TTSProviderManager } from './tts-manager.js';
 import { detectLanguage } from './lang-detector.js';
+import { runTTSBenchmark } from './benchmark.js';
+import { synthesizeSpeechInputSchema, benchmarkTTSInputSchema } from './tts-types.js';
 
-export function createVoiceTools(sttManager: STTProviderManager): ToolDefinition[] {
+export function createVoiceTools(
+  sttManager: STTProviderManager,
+  ttsManager: TTSProviderManager = new TTSProviderManager()
+): ToolDefinition[] {
   return [
     {
       name: 'voice.transcribe_audio',
@@ -101,6 +107,110 @@ export function createVoiceTools(sttManager: STTProviderManager): ToolDefinition
           return {
             success: false,
             action: 'voice.detect_language',
+            error: (error as Error).message,
+            riskLevel: 'R0',
+          };
+        }
+      },
+    },
+    {
+      name: 'voice.synthesize_speech',
+      description: 'Synthesizes text to speech using trilingual TTS providers (Edge Neural, Windows SAPI, Mock) with automatic fallback.',
+      riskLevel: 'R0',
+      inputSchema: synthesizeSpeechInputSchema,
+      execute: async (input: any, _context: AgentContext): Promise<ToolResult> => {
+        try {
+          if (input.outputFilePath) {
+            const res = await ttsManager.synthesizeToFile(input.text, input.outputFilePath, {
+              language: input.language,
+              voice: input.voice,
+              format: input.format,
+            });
+            return {
+              success: true,
+              action: 'voice.synthesize_speech',
+              target: res.filePath,
+              data: {
+                provider: res.provider,
+                voice: res.voice,
+                language: res.language,
+                latencyMs: res.latencyMs,
+                byteLength: res.byteLength,
+                filePath: res.filePath,
+              },
+              evidence: {
+                provider: res.provider,
+                voice: res.voice,
+                byteLength: res.byteLength,
+                latencyMs: res.latencyMs,
+              },
+              riskLevel: 'R0',
+            };
+          } else {
+            const res = await ttsManager.synthesize(input.text, {
+              language: input.language,
+              voice: input.voice,
+              format: input.format,
+            });
+            return {
+              success: true,
+              action: 'voice.synthesize_speech',
+              data: {
+                provider: res.provider,
+                voice: res.voice,
+                language: res.language,
+                latencyMs: res.latencyMs,
+                byteLength: res.byteLength,
+                audioBase64: res.audioBuffer.toString('base64'),
+              },
+              evidence: {
+                provider: res.provider,
+                voice: res.voice,
+                byteLength: res.byteLength,
+                latencyMs: res.latencyMs,
+              },
+              riskLevel: 'R0',
+            };
+          }
+        } catch (error) {
+          return {
+            success: false,
+            action: 'voice.synthesize_speech',
+            error: (error as Error).message,
+            riskLevel: 'R0',
+          };
+        }
+      },
+    },
+    {
+      name: 'voice.benchmark_tts',
+      description: 'Runs multi-provider benchmark evaluating warmth, latency, and pronunciation across English, Urdu, and Arabic phrases.',
+      riskLevel: 'R0',
+      inputSchema: benchmarkTTSInputSchema,
+      execute: async (input: any, _context: AgentContext): Promise<ToolResult> => {
+        try {
+          const report = await runTTSBenchmark({
+            manager: ttsManager,
+            languages: input.languages,
+            outputDirectory: input.outputDirectory,
+          });
+          return {
+            success: true,
+            action: 'voice.benchmark_tts',
+            data: report,
+            evidence: {
+              totalSamples: report.totalSamples,
+              successfulSamples: report.successfulSamples,
+              failedSamples: report.failedSamples,
+              averageLatencyMs: report.averageLatencyMs,
+              outputDirectory: report.outputDirectory,
+            },
+            riskLevel: 'R0',
+          };
+        } catch (error) {
+          return {
+            success: false,
+            action: 'voice.benchmark_tts',
             error: (error as Error).message,
             riskLevel: 'R0',
           };

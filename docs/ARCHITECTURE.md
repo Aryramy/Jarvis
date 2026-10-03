@@ -249,3 +249,13 @@ sequenceDiagram
 - **Context:** Reading comprehensive AI answers aloud creates poor, exhausting user experiences.
 - **Decision:** Maintain distinct `speechResponse` (concise, conversational, markdown-free) and `displayResponse` (detailed, formatted, cited) for every interaction turn.
 - **Consequences:** Provides hands-free clarity while preserving rich detail for on-screen viewing.
+
+### ADR-015: Trilingual TTS Provider Architecture, Edge TTS Client & Resilient Offline Fallback
+- **Status:** Accepted
+- **Context:** Voice-first digital assistant requires high-warmth natural speech across English, Urdu, and Arabic with strict first-byte latency (<1500ms), resilient fallback against transient network or 403 API blocks, and automated multi-provider benchmarking.
+- **Decision:** Implemented `TTSProviderManager` supporting language-specific preferred voice routing (`en`, `ur`, `ar`, `mixed`) with an automated priority fallback chain:
+  1. *Online Natural Neural:* `EdgeTTSProvider` implementing SSML synthesis with Sec-MS-GEC anti-abuse tokens and first-byte timeout monitoring.
+  2. *Local Windows Voice:* `WindowsSapiTTSProvider` utilizing native `System.Speech` for zero-network, 100% offline WAV generation on Windows.
+  3. *Deterministic Fallback:* `MockTTSProvider` generating spec-compliant 16kHz mono PCM WAV buffers for reliable test execution and offline environments.
+  Implemented `runTTSBenchmark` engine evaluating warmth, latency SLA, and pronunciation across standardized test phrases.
+- **Consequences:** The system delivers natural neural speech when online while guaranteeing zero-crash conversational resilience in offline or restricted environments.
